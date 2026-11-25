@@ -86,7 +86,7 @@ var
 
 function PowerShellExe(): String;
 begin
-  { in modalita' 64 bit {sys} e' la System32 a 64 bit }
+  // in modalita' 64 bit la cartella di sistema e' la System32 a 64 bit
   Result := ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe');
 end;
 
