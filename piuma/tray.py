@@ -9,6 +9,7 @@ import sys
 import threading
 
 from .config import IS_MAC, IS_WINDOWS, Config
+from . import __version__
 from .notify import notify
 
 log = logging.getLogger(__name__)
@@ -90,7 +91,7 @@ def run_tray(cfg: Config) -> int:
     def refresh(icon):
         paused = pz.is_paused(cfg.data_dir)
         icon.icon = _icon_image((150, 150, 150) if paused else (46, 160, 90))
-        icon.title = "PiumaAV - " + pz.describe(pz.status(cfg.data_dir))
+        icon.title = f"PiumaAV {__version__} - " + pz.describe(pz.status(cfg.data_dir))
         icon.update_menu()
 
     def watch_pause(icon):
@@ -131,6 +132,7 @@ def run_tray(cfg: Config) -> int:
             yield pystray.MenuItem(f"Consenti {os.path.basename(p)}", allow(p))
 
     menu = pystray.Menu(
+        pystray.MenuItem(f"PiumaAV versione {__version__}", None, enabled=False),
         pystray.MenuItem(lambda item: "Protezione " + pz.describe(pz.status(cfg.data_dir)), None, enabled=False),
         pystray.MenuItem("Disattiva protezione", pystray.Menu(
             pystray.MenuItem("Per 15 minuti", pause_for("per 15 minuti", 15 * 60)),
@@ -151,5 +153,5 @@ def run_tray(cfg: Config) -> int:
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Esci", quit_),
     )
-    pystray.Icon("PiumaAV", _icon_image(), "PiumaAV - protetto", menu).run(setup=watch_pause)
+    pystray.Icon("PiumaAV", _icon_image(), f"PiumaAV {__version__} - protetto", menu).run(setup=watch_pause)
     return 0

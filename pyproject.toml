@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "piuma-av"
-version = "0.6.0"
+version = "0.6.1"
 description = "Antivirus leggero e multipiattaforma basato sul motore ClamAV"
 readme = "README.md"
 requires-python = ">=3.11"
