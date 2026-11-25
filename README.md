@@ -210,3 +210,7 @@ Struttura: `engine.py` (dialogo con clamd/clamscan) · `scanner.py` (esclusioni,
 `realtime.py` (sorveglianza file) · `updater.py` (freshclam) · `quarantine.py` · `service.py` · `cli.py` · `tray.py`.
 
 Licenza: GPL-2.0 (la stessa di ClamAV).
+
+## Licenza
+
+PiumaAV è distribuito con licenza **GNU GPL versione 2** (vedi `LICENSE`), la stessa di ClamAV.
