@@ -145,7 +145,10 @@ def test_process_scan_kills_and_quarantines(cfg, tmp_path):
     evil = tmp_path / "evil_proc"
     shutil.copy(shutil.which("sleep"), evil)
     os.chmod(evil, 0o755)
-    p = subprocess.Popen([str(evil), "30"])
+    p = subprocess.Popen([str(evil), "30"], stderr=subprocess.DEVNULL)
+    time.sleep(0.3)
+    if p.poll() is not None:     # coreutils "multicall" (un solo eseguibile per tutti i comandi)
+        pytest.skip("'sleep' non funziona se rinominato su questo sistema")
     try:
         assert wait_until(lambda: str(evil) in running_images(False))
         sc = Scanner(cfg, EvilNameEngine())
