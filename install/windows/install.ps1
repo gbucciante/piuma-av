@@ -218,6 +218,10 @@ $wdSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfG
 Register-ScheduledTask -TaskName "PiumaAV Watchdog" -Action $wdAction -Trigger $wdTrigger -Principal $principal `
     -Settings $wdSettings -Force | Out-Null
 
+Step "Protezione dagli exploit per browser, Office e lettori PDF"
+try { & (Join-Path $PSScriptRoot "exploit-protection.ps1") }
+catch { Write-Warning "Protezione dagli exploit non applicata ($_)." }
+
 Step "Firma digitale locale degli script (certificato autofirmato)"
 if ((Get-AuthenticodeSignature $PSCommandPath).Status -eq "Valid") {
     # Pacchetto ufficiale gia' firmato (SignPath): niente certificato locale, si copiano gli script cosi' come sono

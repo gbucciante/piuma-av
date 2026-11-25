@@ -1,0 +1,12 @@
+# Avvisa (e propone l'aggiornamento) quando una libreria usata da PiumaAV ha una
+# versione nuova o una vulnerabilita' nota.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"

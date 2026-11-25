@@ -3,6 +3,10 @@
 #Requires -RunAsAdministrator
 $runner = "$env:ProgramFiles\PiumaAV\piuma_run.py"
 if (Test-Path $runner) { & py -3 $runner blocklist remove 2>$null }
+# Regole firewall di PiumaAV e protezione dagli exploit tornano come prima
+Remove-NetFirewallRule -Group "PiumaAV" -ErrorAction SilentlyContinue
+$ep = "$env:ProgramFiles\PiumaAV\tools\exploit-protection.ps1"
+if (Test-Path $ep) { & $ep -Undo }
 Unregister-ScheduledTask -TaskName "PiumaAV" -Confirm:$false -ErrorAction SilentlyContinue
 Unregister-ScheduledTask -TaskName "PiumaAV Watchdog" -Confirm:$false -ErrorAction SilentlyContinue
 Get-CimInstance Win32_Process -Filter "Name like 'python%'" -ErrorAction SilentlyContinue |

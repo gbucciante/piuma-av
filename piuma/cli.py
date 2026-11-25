@@ -185,6 +185,27 @@ def cmd_blocklist(cfg: Config, args) -> int:
     return 0 if blocklist.update(cfg) else 1
 
 
+def cmd_firewall(cfg: Config, args) -> int:
+    from .netguard import NetGuard
+    ng = NetGuard(cfg)
+    if args.faction == "allow":
+        if not args.path:
+            print("Indica il percorso del programma da consentire.", file=sys.stderr)
+            return 2
+        ng.allow(args.path)
+        print(f"Consentito: {args.path}")
+    elif args.faction == "reset":
+        ok = ng.reset()
+        print("Tolte tutte le regole di blocco di PiumaAV." if ok else "Errore nel togliere le regole (serve l'amministratore).")
+        return 0 if ok else 1
+    else:
+        items = ng.blocked()
+        print("Programmi bloccati da Internet:" if items else "Nessun programma bloccato.")
+        for p in items:
+            print(f"  {p}")
+    return 0
+
+
 def cmd_mode(cfg: Config, args) -> int:
     from .mode import set_mode
     if not args.mode:
@@ -269,6 +290,11 @@ def build_parser() -> argparse.ArgumentParser:
     bl = sub.add_parser("blocklist", help="blocco dei siti malevoli (file hosts)")
     bl.add_argument("baction", choices=["update", "remove"], nargs="?", default="update")
     bl.set_defaults(func=cmd_blocklist)
+
+    fw = sub.add_parser("firewall", help="programmi sconosciuti bloccati da Internet (Windows)")
+    fw.add_argument("faction", choices=["list", "allow", "reset"], nargs="?", default="list")
+    fw.add_argument("path", nargs="?")
+    fw.set_defaults(func=cmd_firewall)
 
     q = sub.add_parser("quarantine", help="gestisce la quarantena")
     qs = q.add_subparsers(dest="qaction", required=True)

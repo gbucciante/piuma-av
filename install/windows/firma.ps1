@@ -39,7 +39,7 @@ if ($Rimuovi) {
 # Script da firmare: copiati in Program Files (dove solo gli amministratori scrivono)
 $Tools = Join-Path $InstallDir "tools"
 New-Item -ItemType Directory -Force -Path $Tools | Out-Null
-foreach ($f in "uninstall.ps1", "harden-defender.ps1", "firma.ps1") {
+foreach ($f in "uninstall.ps1", "harden-defender.ps1", "exploit-protection.ps1", "firma.ps1") {
     $src = Join-Path $PSScriptRoot $f
     if ((Test-Path $src) -and ($src -ne (Join-Path $Tools $f))) { Copy-Item -Force $src $Tools }
 }

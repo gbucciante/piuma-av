@@ -112,6 +112,24 @@ def run_tray(cfg: Config) -> int:
         svc.shutdown()
         icon.stop()
 
+    def firewall_items():
+        from .netguard import NetGuard
+        try:
+            blocked = NetGuard(cfg, signature_check=lambda p: None).blocked()
+        except Exception:  # noqa: BLE001
+            blocked = []
+        if not blocked:
+            yield pystray.MenuItem("Nessun programma bloccato", None, enabled=False)
+            return
+
+        def allow(path):
+            def _do(icon, item):
+                NetGuard(cfg, signature_check=lambda p: None).allow(path)
+                notify("PiumaAV", f"{os.path.basename(path)} ora puo' usare Internet")
+            return _do
+        for p in blocked[-15:]:
+            yield pystray.MenuItem(f"Consenti {os.path.basename(p)}", allow(p))
+
     menu = pystray.Menu(
         pystray.MenuItem(lambda item: "Protezione " + pz.describe(pz.status(cfg.data_dir)), None, enabled=False),
         pystray.MenuItem("Disattiva protezione", pystray.Menu(
@@ -126,6 +144,8 @@ def run_tray(cfg: Config) -> int:
         pystray.MenuItem("Aggiorna firme ora", bg(update_now)),
         pystray.MenuItem("Modalita' leggera (senza ClamAV, ~1 GB RAM in meno)", toggle_mode,
                          checked=lambda item: cfg.mode == "leggera"),
+        pystray.MenuItem("Programmi bloccati da Internet", pystray.Menu(firewall_items),
+                         visible=lambda item: IS_WINDOWS and cfg.protection.network_guard),
         pystray.MenuItem("Apri quarantena", lambda i, it: _open(cfg.quarantine_dir)),
         pystray.MenuItem("Apri log", lambda i, it: _open(cfg.log_dir / "piuma.log")),
         pystray.Menu.SEPARATOR,
