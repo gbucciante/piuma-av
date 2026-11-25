@@ -18,6 +18,15 @@ $ClamDir    = Join-Path $env:ProgramFiles "ClamAV"
 
 function Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Cyan }
 
+# Avviso delle modifiche al sistema (richiesto anche dalla policy di firma, CODE_SIGNING_POLICY.md)
+Write-Host "PiumaAV sta per modificare questo PC:" -ForegroundColor Yellow
+Write-Host "  - installa Python e ClamAV (winget) e il servizio ClamAV"
+Write-Host "  - copia PiumaAV in $InstallDir e i dati in $DataDir"
+Write-Host "  - crea le attivita' pianificate 'PiumaAV' e 'PiumaAV Watchdog'"
+Write-Host "  - aggiunge una sezione al file hosts per bloccare i siti malevoli"
+Write-Host "Tutto si annulla con install\windows\uninstall.ps1 (vedi README.md)."
+
+
 # PiumaAV non usa un ambiente virtuale (venv): i lanciatori .exe creati da venv e
 # da pip non sono firmati e Windows (Smart App Control, criteri aziendali) puo'
 # bloccarli con "Accesso negato". Si usa il python.exe ufficiale, firmato, con le
@@ -210,8 +219,16 @@ Register-ScheduledTask -TaskName "PiumaAV Watchdog" -Action $wdAction -Trigger $
     -Settings $wdSettings -Force | Out-Null
 
 Step "Firma digitale locale degli script (certificato autofirmato)"
-try { & (Join-Path $PSScriptRoot "firma.ps1") -InstallDir $InstallDir }
-catch { Write-Warning "Firma non riuscita ($_): PiumaAV funziona lo stesso." }
+if ((Get-AuthenticodeSignature $PSCommandPath).Status -eq "Valid") {
+    # Pacchetto ufficiale gia' firmato (SignPath): niente certificato locale, si copiano gli script cosi' come sono
+    $Tools = Join-Path $InstallDir "tools"
+    New-Item -ItemType Directory -Force -Path $Tools | Out-Null
+    foreach ($f in "uninstall.ps1", "harden-defender.ps1", "firma.ps1") { Copy-Item -Force (Join-Path $PSScriptRoot $f) $Tools }
+    Write-Host "Script gia' firmati digitalmente: certificato locale non necessario."
+} else {
+    try { & (Join-Path $PSScriptRoot "firma.ps1") -InstallDir $InstallDir }
+    catch { Write-Warning "Firma non riuscita ($_): PiumaAV funziona lo stesso." }
+}
 
 Step "Registrazione dell'integrita' dei file"
 Invoke-Piuma -PiumaArgs "integrity","--record" -Optional

@@ -1,0 +1,108 @@
+# Build riproducibile del pacchetto Windows di PiumaAV e firma con SignPath.
+#
+# - Ogni push/PR: test + pacchetto non firmato come artifact (controllo che la build funzioni).
+# - Tag vX.Y.Z: stessa build; se i segreti SignPath sono configurati, i file .ps1 vengono
+#   firmati da SignPath (con approvazione manuale nel portale SignPath) e lo zip firmato
+#   viene allegato alla release GitHub. Senza segreti si allega lo zip non firmato.
+#
+# Segreti/variabili richiesti per la firma (Settings > Secrets and variables > Actions):
+#   secret   SIGNPATH_API_TOKEN        token di un utente "CI" di SignPath (ruolo submitter)
+#   variable SIGNPATH_ORGANIZATION_ID  id dell'organizzazione SignPath
+# Vedi CODE_SIGNING_POLICY.md e .signpath/LEGGIMI.md.
+
+name: Build e firma
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "watchdog>=4.0" "psutil>=5.9" "pytest>=8"
+      - run: python -m pytest -q
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: ver
+        run: echo "version=$(python tools/build_release.py version)" >> "$GITHUB_OUTPUT"
+      - name: Il tag deve corrispondere alla versione
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: test "${GITHUB_REF_NAME}" = "v${{ steps.ver.outputs.version }}"
+      - run: python tools/build_release.py stage dist/pkg
+      - id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: PiumaAV-${{ steps.ver.outputs.version }}-Windows-unsigned
+          path: dist/pkg/
+          if-no-files-found: error
+
+  sign-and-release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write          # per allegare lo zip alla release
+      actions: read            # SignPath scarica l'artifact da questo run
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      HAS_SIGNPATH: ${{ secrets.SIGNPATH_API_TOKEN != '' && vars.SIGNPATH_ORGANIZATION_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Firma con SignPath (attende l'approvazione manuale)
+        if: env.HAS_SIGNPATH == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: piuma-av
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: windows-zip
+          github-artifact-id: ${{ needs.build.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 86400
+          output-artifact-directory: dist/signed
+
+      - name: Pacchetto non firmato (SignPath non ancora configurato)
+        if: env.HAS_SIGNPATH != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: PiumaAV-${{ env.VERSION }}-Windows-unsigned
+          path: dist/signed
+
+      - name: Crea lo zip e il file SHA256
+        run: |
+          python tools/build_release.py zip dist/signed "dist/PiumaAV-${VERSION}-Windows.zip"
+          cd dist && sha256sum "PiumaAV-${VERSION}-Windows.zip" > "PiumaAV-${VERSION}-Windows.zip.sha256"
+
+      - name: Allega alla release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" --title "PiumaAV $VERSION" --notes "Vedi README.md. Code signing policy: CODE_SIGNING_POLICY.md"
+          gh release upload "$GITHUB_REF_NAME" dist/PiumaAV-*-Windows.zip dist/PiumaAV-*-Windows.zip.sha256 --clobber

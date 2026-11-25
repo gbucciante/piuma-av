@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Artifact configuration "windows-zip" del progetto SignPath "piuma-av".
+  Va incollata nel portale SignPath (Project > Artifact configurations); qui e' tenuta
+  sotto controllo di versione perche' fa parte della configurazione di build.
+
+  L'artifact e' la cartella dist/pkg caricata dalla GitHub Action (GitHub la consegna
+  come zip). Vengono firmati con Authenticode tutti gli script PowerShell di Windows.
+  I file .bat e .py non sono firmabili con Authenticode e restano invariati.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <directory path="install/windows">
+      <powershell-file path="*.ps1" min-matches="4" max-matches="unbounded">
+        <authenticode-sign />
+      </powershell-file>
+    </directory>
+  </zip-file>
+</artifact-configuration>
