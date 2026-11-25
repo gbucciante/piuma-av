@@ -169,11 +169,14 @@ Dopo una modifica riavvia PiumaAV (menu dell'icona → Esci, poi riaccedi, oppur
 
 ## Prova senza rischi
 
-Il file di test standard **EICAR** è innocuo ma ogni antivirus lo riconosce. Crea un file di testo nella
-cartella Download con questo contenuto esatto:
+Il file di test standard **EICAR** è innocuo ma ogni antivirus lo riconosce. Crealo nella cartella
+Download incollando questo comando in PowerShell (la stringa è divisa in due pezzi apposta, così questa
+guida non viene scambiata per un virus):
+```powershell
+$a = 'X5O!P%@AP[4\PZX54(P^)7CC)7}$'; $b = 'EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*'
+Set-Content "$env:USERPROFILE\Downloads\eicar.txt" ($a + $b) -NoNewline
 ```
-X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
-```
+Su Linux/macOS: `printf '%s%s' 'X5O!P%@AP[4\PZX54(P^)7CC)7}$' 'EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' > ~/Downloads/eicar.txt`
 Entro un paio di secondi deve sparire, comparire una notifica e risultare in `piuma quarantine list`.
 (Se hai anche Microsoft Defender attivo, potrebbe intercettarlo per primo.)
 

@@ -17,7 +17,8 @@ from piuma.quarantine import Quarantine
 from piuma.realtime import RealtimeProtection
 from piuma.scanner import Scanner
 
-EICAR = rb"X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+# diviso in due pezzi: cosi' questo file non viene scambiato per un virus
+EICAR = rb"X5O!P%@AP[4\PZX54(P^)7CC)7}$" + rb"EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
 
 
 class FakeEngine(BaseEngine):
