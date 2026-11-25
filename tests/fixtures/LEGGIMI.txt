@@ -1,0 +1,6 @@
+File di prova INNOCUI per il motore euristico, compilati con MinGW da sorgenti inclusi:
+- hello.exe          stampa "ciao"
+- hello_upx.exe      lo stesso, compresso con UPX
+- inject_test.exe    importa (senza mai chiamarle) le API tipiche dell'iniezione: apis_injection.c
+- keylog_test.exe    importa (senza mai chiamarle) API da keylogger/downloader: apis_keylog.c
+Le funzioni sospette sono dentro un "if (argc > 1000)" e non vengono mai eseguite.

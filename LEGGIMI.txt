@@ -1,0 +1,12 @@
+PiumaAV 0.5.2 - INSTALLAZIONE SU WINDOWS
+
+1. Estrai questo zip in una cartella (es. Download\PiumaAV).
+2. Fai doppio clic su INSTALLA.bat e rispondi Si alla richiesta di Windows.
+3. Attendi la fine (5-15 minuti: scarica Python, ClamAV e le firme).
+4. Comparira' uno scudo verde vicino all'orologio: la protezione e' attiva.
+
+Consigliato dopo: rafforzare Defender con install\windows\harden-defender.ps1 -Audit
+PC con poca RAM: dal menu dello scudo scegli "Modalita' leggera".
+Firma digitale locale degli script: inclusa nell'installazione (FIRMA.bat per rifarla,
+"FIRMA.bat rimuovi" per toglierla).
+Dettagli: README.md

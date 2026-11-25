@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+*.zip
+*.pfx
+*.cer
+*.key
+*.pem
+.env
+risultati_test_av.json

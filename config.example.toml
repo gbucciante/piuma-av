@@ -1,0 +1,114 @@
+# Configurazione di PiumaAV
+# Posizione: Windows  C:\ProgramData\PiumaAV\config.toml
+#            macOS    ~/Library/Application Support/PiumaAV/config.toml
+#            Linux    /etc/piuma-av/config.toml  (servizio di sistema)
+# Si possono usare ~ e le variabili d'ambiente (%USERPROFILE%, $HOME).
+
+[general]
+# "completa" = con ClamAV (~1-1,5 GB di RAM); "leggera" = senza ClamAV: su Windows usa
+# il motore di Defender + hash MalwareBazaar + YARA. Si cambia anche con `piuma mode`
+# o dal menu dell'icona (quella scelta prevale su questa riga).
+mode = "completa"
+# Cosa fare quando trova una minaccia: "quarantine" (consigliato), "report", "delete"
+action = "quarantine"
+notifications = true
+# Cartelle da non scansionare mai (es. macchine virtuali, backup enormi)
+exclude = []
+# Estensioni ignorate (download non ancora completati: verranno scansionati a fine download)
+exclude_extensions = [".crdownload", ".part", ".partial", ".download"]
+# Cartelle della "scansione rapida" (se omesso: le stesse del tempo reale)
+# quick_scan_paths = ["~/Downloads", "~/Desktop"]
+
+[engine]
+# Motori usati insieme: un file e' infetto se almeno uno lo rileva.
+#   "defender" = motore di Microsoft Defender (solo Windows, il piu' efficace)
+#   "clamav"   = ClamAV + firme extra (vedi [feeds])
+#   "yara"     = regole YARA-Forge (famiglie di malware)
+#   "heuristic"= PiumaHeur, euristica propria con punteggio di rischio 0-100
+# Predefinito Windows: ["defender", "clamav", "yara", "heuristic"]; altri: ["clamav", "yara", "heuristic"]
+# engines = ["defender", "clamav", "yara", "heuristic"]
+# Le rilevazioni solo-YARA vengono segnalate ma non messe in quarantena
+yara_quarantine = false
+# PiumaHeur: da questo punteggio avvisa, da quello dopo mette in quarantena
+heuristic_alert_score = 60
+heuristic_quarantine_score = 90
+# ClamAV: "auto" = clamd se attivo (veloce), altrimenti clamscan
+mode = "auto"
+clamd_host = "127.0.0.1"
+clamd_port = 3310
+# clamd_socket = "/var/run/clamav/clamd.ctl"   # Linux: socket locale
+max_file_size_mb = 100
+
+[realtime]
+enabled = true
+# Cartelle sorvegliate in tempo reale (se omesso: Download, Desktop, Documenti,
+# Temp e cartella di Esecuzione automatica)
+# paths = ["~/Downloads", "~/Desktop", "D:\\Download"]
+settle_seconds = 1.5
+
+[update]
+enabled = true
+# Ogni quante ore aggiornare le firme (minimo 1, come richiesto da ClamAV)
+interval_hours = 4
+# percorso di freshclam.conf (lo imposta l'installer, se serve)
+# freshclam_config = ""
+
+[feeds]
+# Firme aggiuntive gratuite, aggiornate insieme a quelle ufficiali
+enabled = true
+malwarebazaar = true        # hash di malware raccolti ogni giorno da abuse.ch
+yara_forge = true           # regole YARA-Forge "core"
+# MalwareBazaar richiede una chiave gratuita: registrati su https://auth.abuse.ch
+# e incollala qui (senza chiave questo elenco viene saltato).
+# abusech_auth_key = ""
+# clamav_database_dir = ""  # cartella firme di ClamAV (rilevata automaticamente)
+# Altri feed ClamAV, es. SaneSecurity da un mirror ufficiale:
+# extra = [{ url = "https://<mirror-sanesecurity>/phish.ndb", file = "phish.ndb" }]
+
+[reputation]
+# Controllo su VirusTotal dei file eseguibili/script non riconosciuti dagli altri motori.
+# Invia SOLO l'hash SHA-256, mai il file. Serve una chiave gratuita:
+# https://www.virustotal.com/gui/join-us  (poi: profilo > API key)
+enabled = false
+virustotal_api_key = ""
+min_detections = 3          # antivirus di VirusTotal che devono segnalarlo
+requests_per_minute = 4     # limiti del piano gratuito
+daily_limit = 500
+
+[protection]
+autostart_monitor = true            # avvisa se un programma si aggiunge all'avvio automatico
+autostart_interval_minutes = 5
+ransomware = true                   # file esca + rilevamento raffiche di file cifrati
+ransomware_burst_files = 40
+ransomware_burst_seconds = 15
+canary_files = true
+integrity_check = true              # avvisa se file del programma o firme vengono manomessi
+domain_blocking = true              # blocca i siti malevoli tramite il file hosts
+blocklists = ["https://urlhaus.abuse.ch/downloads/hostfile/"]
+
+[behavior]
+enabled = true              # analisi del comportamento dei nuovi processi
+kill_critical = true        # termina subito i processi "critici" (es. cancellazione backup)
+scan_new_processes = true   # analizza l'eseguibile di ogni nuovo processo
+
+[usb]
+enabled = true              # scansione automatica di chiavette e dischi esterni
+scan_already_connected = false
+
+[processes]
+enabled = true              # controllo periodico dei processi in esecuzione
+interval_hours = 12
+include_modules = true      # anche le DLL / librerie caricate
+kill_infected = true        # mai per i file di sistema: solo avviso
+memory_scan = false         # Windows: anche la memoria (clamscan --memory + scansione rapida Defender)
+
+# Scansioni pianificate (si possono aggiungere piu' blocchi)
+[[scheduled_scan]]
+name = "rapida-giornaliera"
+paths = ["~/Downloads", "~/Desktop"]
+interval_hours = 24
+
+# [[scheduled_scan]]
+# name = "completa-settimanale"
+# paths = ["C:\\"]
+# interval_hours = 168
