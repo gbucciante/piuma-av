@@ -45,8 +45,9 @@ and every one of them can be disabled in the configuration file.
 
 Before changing anything, the Windows installer lists the system changes it will make
 (Python and ClamAV via winget, program and data folders, scheduled tasks, a dedicated
-section in the `hosts` file for the malicious-site blocklist). Everything is reverted by
-`install\windows\uninstall.ps1`. Microsoft Defender hardening is never applied
+section in the `hosts` file for the malicious-site blocklist, Windows Firewall rules in the
+`PiumaAV` group, exploit-protection settings for browsers/Office/PDF readers). Everything is
+reverted by `install\windows\uninstall.ps1`. Microsoft Defender hardening is never applied
 automatically: it is a separate, opt-in script (`harden-defender.ps1`, with `-Audit` to
 try it and `-Undo` to revert it). See [README.md](README.md).
 

@@ -1,6 +1,7 @@
 # Build riproducibile del pacchetto Windows di PiumaAV e firma con SignPath.
 #
-# - Ogni push/PR: test + pacchetto non firmato come artifact (controllo che la build funzioni).
+# - Avvio manuale (workflow_dispatch): test + pacchetto non firmato come artifact.
+#   (I test a ogni push/PR sono in tests.yml.)
 # - Tag vX.Y.Z: stessa build; se i segreti SignPath sono configurati, i file .ps1 vengono
 #   firmati da SignPath (con approvazione manuale nel portale SignPath) e lo zip firmato
 #   viene allegato alla release GitHub. Senza segreti si allega lo zip non firmato.
@@ -14,9 +15,7 @@ name: Build e firma
 
 on:
   push:
-    branches: [main]
     tags: ["v*"]
-  pull_request:
   workflow_dispatch:
 
 permissions:

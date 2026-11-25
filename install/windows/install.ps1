@@ -24,6 +24,7 @@ Write-Host "  - installa Python e ClamAV (winget) e il servizio ClamAV"
 Write-Host "  - copia PiumaAV in $InstallDir e i dati in $DataDir"
 Write-Host "  - crea le attivita' pianificate 'PiumaAV' e 'PiumaAV Watchdog'"
 Write-Host "  - aggiunge una sezione al file hosts per bloccare i siti malevoli"
+Write-Host "  - aggiunge regole al Windows Firewall (gruppo 'PiumaAV') e la protezione dagli exploit per browser, Office e PDF"
 Write-Host "Tutto si annulla con install\windows\uninstall.ps1 (vedi README.md)."
 
 
@@ -227,7 +228,7 @@ if ((Get-AuthenticodeSignature $PSCommandPath).Status -eq "Valid") {
     # Pacchetto ufficiale gia' firmato (SignPath): niente certificato locale, si copiano gli script cosi' come sono
     $Tools = Join-Path $InstallDir "tools"
     New-Item -ItemType Directory -Force -Path $Tools | Out-Null
-    foreach ($f in "uninstall.ps1", "harden-defender.ps1", "firma.ps1") { Copy-Item -Force (Join-Path $PSScriptRoot $f) $Tools }
+    Get-ChildItem $PSScriptRoot -Filter *.ps1 | Where-Object Name -ne "install.ps1" | Copy-Item -Destination $Tools -Force
     Write-Host "Script gia' firmati digitalmente: certificato locale non necessario."
 } else {
     try { & (Join-Path $PSScriptRoot "firma.ps1") -InstallDir $InstallDir }
