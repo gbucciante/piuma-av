@@ -12,6 +12,7 @@ Unregister-ScheduledTask -TaskName "PiumaAV Watchdog" -Confirm:$false -ErrorActi
 Get-CimInstance Win32_Process -Filter "Name like 'python%'" -ErrorAction SilentlyContinue |
     Where-Object { $_.CommandLine -like "*PiumaAV\piuma_run.py*" } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+Remove-MpPreference -ExclusionPath "$env:ProgramData\PiumaAV\yara" -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force "$env:ProgramFiles\PiumaAV" -ErrorAction SilentlyContinue
 $p = [Environment]::GetEnvironmentVariable("Path", "Machine") -replace [regex]::Escape(";$env:ProgramFiles\PiumaAV"), ""
 [Environment]::SetEnvironmentVariable("Path", $p, "Machine")

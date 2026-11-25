@@ -1,0 +1,108 @@
+# Costruisce l'installer PiumaAV-X.Y.Z-Setup.exe e lo prova su un Windows vero:
+# installazione silenziosa, controlli, disinstallazione.
+# Parte a ogni pull request che tocca l'installer o i file di PiumaAV, o a mano.
+name: Installer
+
+on:
+  pull_request:
+    paths:
+      - "installer/**"
+      - "install/windows/**"
+      - "piuma/**"
+      - "tools/build_release.py"
+      - "tools/make_icon.py"
+      - ".github/workflows/installer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Pacchetto e icona
+        run: |
+          python -m pip install --disable-pip-version-check "Pillow>=10"
+          python tools/build_release.py stage dist/pkg
+          python tools/make_icon.py dist/piuma.ico
+      - name: Compila l'installer (Inno Setup)
+        run: |
+          choco upgrade innosetup -y --no-progress | Out-Null
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { $iscc = "$env:ProgramFiles\Inno Setup 6\ISCC.exe" }
+          $v = python tools/build_release.py version
+          & $iscc /Qp "/DAppVersion=$v" installer\PiumaAV.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem dist\*.exe | Format-Table Name, Length
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PiumaAV-Setup
+          path: dist/PiumaAV-*-Setup.exe
+          if-no-files-found: error
+
+  install-test:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: PiumaAV-Setup
+          path: setup
+      - name: Python del sistema
+        run: |
+          Get-Command py, python -ErrorAction SilentlyContinue | Format-Table Name, Source
+          py -3 --version
+      - name: Installazione silenziosa
+        run: |
+          $exe = (Get-ChildItem setup\PiumaAV-*-Setup.exe).FullName
+          $p = Start-Process -Wait -PassThru -FilePath $exe -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$PWD\setup-install.log"
+          Write-Host "Codice di uscita dell'installer: $($p.ExitCode)"
+          Get-Content "$env:ProgramFiles\PiumaAV\setup\installazione.log" -ErrorAction SilentlyContinue
+          if ($p.ExitCode -ne 0) { exit 1 }
+      - name: Controlli dopo l'installazione
+        run: |
+          $ok = $true
+          function Check($name, $cond) { if ($cond) { Write-Host "OK   $name" } else { Write-Host "FAIL $name"; $script:ok = $false } }
+          $log = Get-Content "$env:ProgramFiles\PiumaAV\setup\installazione.log" -Raw
+          Check "install.ps1 terminato con codice 0" ($log -match '##### codice di uscita: 0')
+          Check "piuma_run.py installato" (Test-Path "$env:ProgramFiles\PiumaAV\piuma_run.py")
+          Check "disinstallatore presente" (Test-Path "$env:ProgramFiles\PiumaAV\unins000.exe")
+          Check "attivita' PiumaAV" ([bool](Get-ScheduledTask -TaskName "PiumaAV" -ErrorAction SilentlyContinue))
+          Check "attivita' PiumaAV Watchdog" ([bool](Get-ScheduledTask -TaskName "PiumaAV Watchdog" -ErrorAction SilentlyContinue))
+          $cfg = "$env:ProgramData\PiumaAV\config.toml"
+          Check "config.toml presente" (Test-Path $cfg)
+          $acl = (Get-Acl $cfg).Access
+          $sids = $acl | ForEach-Object { try { $_.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value } catch {} }
+          Check "config.toml leggibile dagli Utenti (S-1-5-32-545)" ($sids -contains "S-1-5-32-545")
+          Check "config.toml gestibile dagli Amministratori (S-1-5-32-544)" ($sids -contains "S-1-5-32-544")
+          icacls $cfg
+          Check "servizio clamd" ([bool](Get-Service clamd -ErrorAction SilentlyContinue))
+          py -3 "$env:ProgramFiles\PiumaAV\piuma_run.py" status
+          Check "piuma status" ($LASTEXITCODE -eq 0)
+          if (-not $ok) { exit 1 }
+      - name: Disinstallazione silenziosa
+        if: always()
+        run: |
+          $un = "$env:ProgramFiles\PiumaAV\unins000.exe"
+          if (-not (Test-Path $un)) { Write-Host "disinstallatore assente"; exit 1 }
+          $p = Start-Process -Wait -PassThru -FilePath $un -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$PWD\setup-uninstall.log"
+          Start-Sleep -Seconds 5
+          $ok = ($p.ExitCode -eq 0) -and -not (Test-Path "$env:ProgramFiles\PiumaAV") -and
+                -not (Get-ScheduledTask -TaskName "PiumaAV" -ErrorAction SilentlyContinue) -and
+                -not (Get-NetFirewallRule -Group "PiumaAV" -ErrorAction SilentlyContinue)
+          Write-Host "Disinstallazione: codice $($p.ExitCode), pulita: $ok"
+          Get-ChildItem "$env:ProgramFiles\PiumaAV" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 20 FullName
+          if (-not $ok) { exit 1 }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: log-installazione
+          path: |
+            setup-*.log
+            C:\Program Files\PiumaAV\setup\installazione.log
+          if-no-files-found: ignore
