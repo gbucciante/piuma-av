@@ -253,6 +253,7 @@ def test_defender_helpers():
 
 def test_create_engine_skips_unavailable(cfg, tmp_path):
     from piuma.engine import create_engine, EngineError
-    cfg.engine.engines = ["defender"]          # su Linux non esiste
+    cfg.engine.engines = ["yara"]              # nessuna regola in tmp_path: motore non disponibile
+    cfg.engine.yara_rules_dir = str(tmp_path / "vuota")
     with pytest.raises(EngineError):
         create_engine(cfg.engine, tmp_path)
