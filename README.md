@@ -222,6 +222,15 @@ Struttura: `engine.py` (dialogo con clamd/clamscan) · `scanner.py` (esclusioni,
 
 Licenza: GPL-2.0 (la stessa di ClamAV).
 
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org)
+
+I pacchetti Windows ufficiali (pagina [Releases](https://github.com/gbucciante/piuma-av/releases))
+sono costruiti da questo repository con GitHub Actions; quando la firma SignPath è attiva, i loro
+script PowerShell sono firmati digitalmente. Ruoli del team, cosa viene firmato e come: [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md).
+Privacy (nessuna telemetria; elenco dei servizi contattati): [PRIVACY.md](PRIVACY.md).
+
 ## Licenza
 
 PiumaAV è distribuito con licenza **GNU GPL versione 2** (vedi `LICENSE`), la stessa di ClamAV.
