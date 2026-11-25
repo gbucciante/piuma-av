@@ -11,6 +11,11 @@
 
 #Requires -RunAsAdministrator
 $ErrorActionPreference = "Stop"
+# Avviato da PowerShell 7 (pwsh), Windows PowerShell 5.1 eredita i percorsi dei moduli di pwsh
+# e non riesce a caricare i propri (es. Get-AuthenticodeSignature): si usano quelli di sistema.
+if ($PSVersionTable.PSEdition -eq 'Desktop') {
+    $env:PSModulePath = "$env:ProgramFiles\WindowsPowerShell\Modules;" + [Environment]::GetEnvironmentVariable('PSModulePath', 'Machine')
+}
 $ProjectDir = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $InstallDir = Join-Path $env:ProgramFiles "PiumaAV"
 $DataDir    = Join-Path $env:ProgramData "PiumaAV"
