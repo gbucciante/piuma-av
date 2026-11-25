@@ -91,6 +91,11 @@ def cmd_update(cfg: Config, args) -> int:
         blocklist.update(cfg)
     if clamd.ping():
         clamd.reload()
+    if ok:
+        from .service import _State, format_when
+        st = _State(cfg.state_file)
+        st.mark("update")
+        print("Firme aggiornate il", format_when(st.last("update")))
     return 0 if ok else 1
 
 
@@ -128,12 +133,8 @@ def cmd_status(cfg: Config, args) -> int:
     print("Modalita'      :", cfg.mode)
     print("Motori attivi  :", ", ".join(cfg.engine.engines))
     print("Tempo reale    :", ", ".join(cfg.realtime.paths) if cfg.realtime.enabled else "disattivato")
-    try:
-        state = json.loads(cfg.state_file.read_text(encoding="utf-8"))
-        last = state.get("update")
-        print("Ultimo aggiornamento:", dt.datetime.fromtimestamp(last).strftime("%Y-%m-%d %H:%M") if last else "mai")
-    except (OSError, ValueError):
-        print("Ultimo aggiornamento: mai (servizio non ancora avviato)")
+    from .service import format_when, last_update
+    print("Firme aggiornate:", format_when(last_update(cfg)))
     print("In quarantena  :", len(Quarantine(cfg.quarantine_dir).list()))
     return 0
 

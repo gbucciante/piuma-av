@@ -41,11 +41,31 @@ class _State:
         return float(self.data.get(key, 0))
 
     def mark(self, key: str) -> None:
+        try:                       # rilegge: anche `piuma update` da terminale scrive qui
+            self.data = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            pass
         self.data[key] = time.time()
         try:
             self.path.write_text(json.dumps(self.data, indent=2), encoding="utf-8")
         except OSError as exc:
             log.debug("stato non salvato: %s", exc)
+
+
+def last_update(cfg: Config) -> float | None:
+    """Istante dell'ultimo aggiornamento delle firme riuscito (None se mai)."""
+    try:
+        value = json.loads(cfg.state_file.read_text(encoding="utf-8")).get("update")
+        return float(value) if value else None
+    except (OSError, ValueError, TypeError):
+        return None
+
+
+def format_when(ts: float | None) -> str:
+    if not ts:
+        return "mai"
+    import datetime as dt
+    return dt.datetime.fromtimestamp(ts).strftime("%d/%m/%Y %H:%M")
 
 
 class Service:

@@ -291,3 +291,13 @@ def test_malwarebazaar_needs_free_key(tmp_path, monkeypatch):
     monkeypatch.setattr(feeds, "_download", lambda url, key="", timeout=300: calls.append(url) or csv)
     assert feeds.update_malwarebazaar(c)
     assert "/K123/" in calls[0]
+
+
+def test_last_update_date(tmp_path):
+    from piuma.service import _State, format_when, last_update
+    c = Config(data_dir=tmp_path / "data")
+    assert last_update(c) is None and format_when(None) == "mai"
+    c.data_dir.mkdir(parents=True)
+    _State(c.state_file).mark("update")
+    ts = last_update(c)
+    assert ts and len(format_when(ts)) == 16 and format_when(ts)[2] == "/"
