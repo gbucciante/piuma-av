@@ -28,7 +28,7 @@ import threading
 import time
 from dataclasses import dataclass
 
-from .config import Config
+from .config import IS_WINDOWS, Config
 from .pause import is_paused
 
 log = logging.getLogger(__name__)
@@ -142,6 +142,10 @@ class BehaviorMonitor:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self.my_pid = os.getpid()
+        self.netguard = None
+        if IS_WINDOWS and cfg.protection.network_guard:
+            from .netguard import NetGuard
+            self.netguard = NetGuard(cfg)
 
     # ------------------------------------------------------------- analisi
     def inspect(self, proc) -> list[Rule]:
@@ -168,6 +172,11 @@ class BehaviorMonitor:
             if rule.severity == "critica" and self.cfg.behavior.kill_critical:
                 killed = self._kill(proc)
             self.alert(rule, name, proc.pid, cmd, pname, killed)
+        if self.netguard and exe:          # prima della scansione, che puo' richiedere qualche secondo
+            try:
+                self.netguard.check(exe)
+            except Exception:  # noqa: BLE001 - il firewall non deve fermare l'analisi
+                log.exception("firewall: errore su %s", exe)
         if self.scanner and self.cfg.behavior.scan_new_processes and exe:
             self._scan_executable(proc, exe)
         return hits

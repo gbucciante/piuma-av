@@ -59,6 +59,14 @@ piuma blocklist update|remove   aggiorna o toglie il blocco dei siti malevoli
 | **Modalità leggera** | `piuma mode leggera` o il menu dell'icona: spegne ClamAV (~1–1,5 GB di RAM in meno) e usa motore Defender + hash MalwareBazaar (pochi MB) + YARA. Consigliata su Windows con poca RAM. |
 | **Disattiva protezione** | Dal menu dell'icona: per 15 min, 30 min, 1 ora o fino al riavvio, con conferma; si riattiva da sola. Da terminale: `piuma pause 30m`, `piuma resume`. Solo un amministratore può farlo, quindi un virus senza privilegi non può spegnerla. |
 
+## Novità della versione 0.6
+
+| Funzione | Cosa fa |
+|---|---|
+| **Blocco Internet per programmi sconosciuti** (Windows) | Quando parte un programma *nuovo*, **senza firma digitale**, che si trova in una cartella dell'utente (Download, Desktop, AppData, Temp…), PiumaAV crea una regola del Windows Firewall che gli impedisce di collegarsi a Internet e ti avvisa. Molti virus "chiamano casa" appena partono: così restano isolati. Per sbloccarlo: menu dello scudo › *Programmi bloccati da Internet*, oppure `piuma firewall allow <percorso>`. Browser, Office, aggiornamenti e tutti i programmi firmati o installati in Program Files non vengono toccati. `piuma firewall reset` toglie tutte le regole. Limite: la regola arriva entro circa mezzo secondo dall'avvio, un collegamento immediato può passare. |
+| **Protezione dagli exploit** (Windows) | L'installazione impone a browser, Office e lettori PDF le difese di Windows DEP, ASLR, SEHOP e CFG, che rendono molto più difficile sfruttare una falla di quei programmi. Lo stato precedente viene salvato: `tools\exploit-protection.ps1 -Undo` lo ripristina (lo fa anche la disinstallazione). |
+| **Controlli automatici su GitHub** | Dependabot segnala le librerie con vulnerabilità note, CodeQL analizza il codice a ogni modifica e i test girano da soli su Linux e Windows. |
+
 ## Novità della versione 0.5: motore euristico PiumaHeur
 
 Accanto a Defender e ClamAV ora c'è un piccolo motore **tutto di PiumaAV**, che non ha bisogno di firme e

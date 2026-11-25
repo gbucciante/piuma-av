@@ -192,6 +192,9 @@ class ProtectionConfig:
     domain_blocking: bool = True          # blocca i siti malevoli tramite il file hosts
     blocklists: list[str] = field(default_factory=lambda: ["https://urlhaus.abuse.ch/downloads/hostfile/"])
     hosts_file: str = ""                  # vuoto = file hosts di sistema
+    # Windows: i programmi nuovi senza firma nelle cartelle dell'utente non possono
+    # collegarsi a Internet finche' non li approvi (vedi netguard.py)
+    network_guard: bool = True
 
 
 @dataclass

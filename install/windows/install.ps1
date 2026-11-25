@@ -209,6 +209,10 @@ $wdSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfG
 Register-ScheduledTask -TaskName "PiumaAV Watchdog" -Action $wdAction -Trigger $wdTrigger -Principal $principal `
     -Settings $wdSettings -Force | Out-Null
 
+Step "Protezione dagli exploit per browser, Office e lettori PDF"
+try { & (Join-Path $PSScriptRoot "exploit-protection.ps1") }
+catch { Write-Warning "Protezione dagli exploit non applicata ($_)." }
+
 Step "Firma digitale locale degli script (certificato autofirmato)"
 try { & (Join-Path $PSScriptRoot "firma.ps1") -InstallDir $InstallDir }
 catch { Write-Warning "Firma non riuscita ($_): PiumaAV funziona lo stesso." }

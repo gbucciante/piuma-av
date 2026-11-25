@@ -85,6 +85,9 @@ canary_files = true
 integrity_check = true              # avvisa se file del programma o firme vengono manomessi
 domain_blocking = true              # blocca i siti malevoli tramite il file hosts
 blocklists = ["https://urlhaus.abuse.ch/downloads/hostfile/"]
+# Windows: i programmi nuovi senza firma nelle cartelle dell'utente non vanno su
+# Internet finche' non li approvi (menu dello scudo o `piuma firewall allow`)
+network_guard = true
 
 [behavior]
 enabled = true              # analisi del comportamento dei nuovi processi
