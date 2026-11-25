@@ -58,12 +58,29 @@ jobs:
           Get-Command py, python -ErrorAction SilentlyContinue | Format-Table Name, Source
           py -3 --version
       - name: Installazione silenziosa
+        timeout-minutes: 35
         run: |
           $exe = (Get-ChildItem setup\PiumaAV-*-Setup.exe).FullName
-          $p = Start-Process -Wait -PassThru -FilePath $exe -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$PWD\setup-install.log"
+          $log = "$env:ProgramFiles\PiumaAV\setup\installazione.log"
+          $p = Start-Process -PassThru -FilePath $exe -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$PWD\setup-install.log"
+          # mostra il resoconto mentre l'installazione procede (max 30 minuti)
+          $shown = 0; $deadline = (Get-Date).AddMinutes(30)
+          while ($true) {
+            $done = $p.WaitForExit(10000)
+            if (Test-Path $log) {
+              $lines = @(Get-Content $log -ErrorAction SilentlyContinue)
+              if ($lines.Count -gt $shown) { $lines[$shown..($lines.Count - 1)] | ForEach-Object { Write-Host $_ }; $shown = $lines.Count }
+            }
+            if ($done) { break }
+            if ((Get-Date) -gt $deadline) {
+              Write-Host "TIMEOUT: installazione bloccata. Processi in corso:"
+              Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'powershell|python|winget|freshclam|clam|msiexec|pip|py' } |
+                Format-Table ProcessId, ParentProcessId, Name, CommandLine -AutoSize -Wrap | Out-String -Width 300 | Write-Host
+              exit 1
+            }
+          }
           Write-Host "Codice di uscita dell'installer: $($p.ExitCode)"
-          Get-Content "$env:ProgramFiles\PiumaAV\setup\installazione.log" -ErrorAction SilentlyContinue
-          if ($p.ExitCode -ne 0) { exit 1 }
+          if ($p.ExitCode -ne 0) { Get-Content setup-install.log -Tail 40; exit 1 }
       - name: Controlli dopo l'installazione
         run: |
           $ok = $true

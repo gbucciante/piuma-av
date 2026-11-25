@@ -117,7 +117,7 @@ var
 begin
   SaveStringToFile(LogFile, #13#10 + '##### ' + Script + ' ' + Args + #13#10, True);
   if not ExecAndLogOutput(PowerShellExe(),
-      '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + Script + '" ' + Args,
+      '-NoProfile -NonInteractive -InputFormat None -ExecutionPolicy Bypass -File "' + Script + '" ' + Args,
       ExpandConstant('{app}\setup'), SW_HIDE, ewWaitUntilTerminated, Rc, @OnPsLog) then
     Rc := -1;
   SaveStringToFile(LogFile, '##### codice di uscita: ' + IntToStr(Rc) + #13#10, True);
@@ -172,7 +172,7 @@ begin
   if CurUninstallStep <> usUninstall then
     Exit;
   if FileExists(ExpandConstant('{app}\defender-rafforzato.txt')) then
-    Exec(PowerShellExe(), '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' +
+    Exec(PowerShellExe(), '-NoProfile -NonInteractive -InputFormat None -ExecutionPolicy Bypass -File "' +
          ExpandConstant('{app}\setup\install\windows\harden-defender.ps1') + '" -Undo',
          '', SW_HIDE, ewWaitUntilTerminated, Rc);
   { uninstall.ps1 cancella la cartella di PiumaAV: lo si esegue da una copia temporanea }
@@ -180,7 +180,7 @@ begin
   Tmp := AddBackslash(GetTempDir()) + 'PiumaAV-uninstall.ps1';
   if FileCopy(Src, Tmp, False) then
   begin
-    Exec(PowerShellExe(), '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + Tmp + '"',
+    Exec(PowerShellExe(), '-NoProfile -NonInteractive -InputFormat None -ExecutionPolicy Bypass -File "' + Tmp + '"',
          GetTempDir(), SW_HIDE, ewWaitUntilTerminated, Rc);
     DeleteFile(Tmp);
   end;
