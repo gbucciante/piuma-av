@@ -103,5 +103,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
-            gh release create "$GITHUB_REF_NAME" --title "PiumaAV $VERSION" --notes "Vedi README.md. Code signing policy: CODE_SIGNING_POLICY.md"
+            gh release create "$GITHUB_REF_NAME" --title "PiumaAV $VERSION" --notes "Pacchetto Windows: estrai lo zip e avvia INSTALLA.bat (vedi README.md). Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). [Code signing policy](https://github.com/gbucciante/piuma-av/blob/main/CODE_SIGNING_POLICY.md) · [Privacy](https://github.com/gbucciante/piuma-av/blob/main/PRIVACY.md)"
           gh release upload "$GITHUB_REF_NAME" dist/PiumaAV-*-Windows.zip dist/PiumaAV-*-Windows.zip.sha256 --clobber
