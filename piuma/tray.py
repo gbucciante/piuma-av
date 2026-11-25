@@ -37,7 +37,7 @@ def run_tray(cfg: Config) -> int:
     except ImportError:
         print("Per l'icona servono: pip install pystray Pillow", file=sys.stderr)
         return 2
-    from .service import Service
+    from .service import Service, format_when, last_update
     from .updater import update_signatures
 
     svc = Service(cfg)
@@ -56,7 +56,12 @@ def run_tray(cfg: Config) -> int:
         ok = update_signatures(cfg.update, None)
         update_all(cfg)
         svc.engine.reload()
-        notify("PiumaAV", "Firme aggiornate" if ok else "Aggiornamento non riuscito (vedi log)")
+        if ok:
+            svc.state.mark("update")
+            notify("PiumaAV", f"Firme aggiornate il {format_when(last_update(cfg))}")
+        else:
+            notify("PiumaAV", "Aggiornamento non riuscito (vedi log). Ultimo riuscito: "
+                              + format_when(last_update(cfg)))
 
     def toggle_mode(icon, item):
         from .mode import set_mode
@@ -133,6 +138,7 @@ def run_tray(cfg: Config) -> int:
 
     menu = pystray.Menu(
         pystray.MenuItem(f"PiumaAV versione {__version__}", None, enabled=False),
+        pystray.MenuItem(lambda item: "Firme aggiornate: " + format_when(last_update(cfg)), None, enabled=False),
         pystray.MenuItem(lambda item: "Protezione " + pz.describe(pz.status(cfg.data_dir)), None, enabled=False),
         pystray.MenuItem("Disattiva protezione", pystray.Menu(
             pystray.MenuItem("Per 15 minuti", pause_for("per 15 minuti", 15 * 60)),
