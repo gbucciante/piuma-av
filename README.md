@@ -110,7 +110,14 @@ aggira facilmente: è un aiuto in più, non una garanzia.
 Scarica/estrai la cartella del progetto, poi:
 
 ### Windows 10/11
-Apri **PowerShell come amministratore** nella cartella del progetto ed esegui:
+**Modo semplice:** scarica `PiumaAV-X.Y.Z-Setup.exe` dalla pagina
+[Releases](https://github.com/gbucciante/piuma-av/releases), fai doppio clic, rispondi *Sì*
+alla richiesta di Windows e segui le schermate (Avanti › Installa). Ci vogliono 5-15 minuti.
+Per toglierlo: *Impostazioni › App › App installate › PiumaAV › Disinstalla*.
+L'installer (cartella `installer/`, Inno Setup) esegue lo stesso `install.ps1` descritto qui sotto
+e salva il resoconto in `C:\Program Files\PiumaAV\setup\installazione.log`.
+
+**Modo manuale:** apri **PowerShell come amministratore** nella cartella del progetto ed esegui:
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
 .\install\windows\install.ps1

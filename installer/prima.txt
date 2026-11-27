@@ -1,0 +1,22 @@
+PiumaAV - cosa succede durante l'installazione
+
+PiumaAV e' un antivirus leggero e gratuito (open source, licenza GPL-2.0).
+L'installazione modifica questo PC nel modo seguente:
+
+  - installa Python 3 e il motore antivirus ClamAV, se non ci sono gia'
+    (scaricati con winget dai siti ufficiali), e il servizio ClamAV;
+  - copia PiumaAV in C:\Program Files\PiumaAV e le sue impostazioni,
+    la quarantena e i log in C:\ProgramData\PiumaAV;
+  - crea le attivita' pianificate "PiumaAV" (avvia lo scudo verde vicino
+    all'orologio quando accedi) e "PiumaAV Watchdog" (lo riavvia se si ferma);
+  - aggiunge una sezione al file hosts per bloccare i siti malevoli noti;
+  - aggiunge regole a Windows Firewall (gruppo "PiumaAV") e la protezione
+    dagli exploit per browser, Office e lettori PDF;
+  - crea un certificato di firma valido solo su questo PC per firmare
+    gli script di PiumaAV.
+
+Serve una connessione a Internet. Ci vogliono da 5 a 15 minuti,
+soprattutto per scaricare le firme dei virus.
+
+Per togliere tutto: Impostazioni > App > App installate > PiumaAV > Disinstalla.
+ClamAV resta installato (si toglie a parte, dallo stesso elenco).
