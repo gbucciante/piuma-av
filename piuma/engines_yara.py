@@ -50,11 +50,14 @@ def compile_rules(rules_dir: Path, which: str | None = None) -> Path:
     good = {}
     for i, src in enumerate(_sources(rules_dir)):
         try:
-            yara.compile(filepath=str(src), externals=EXTERNALS)
-            good[f"ns{i}"] = str(src)
+            text = _clean_for_yara(src.read_text(encoding="utf-8", errors="replace"), src.name)
         except yara.Error as exc:
             log.warning("regola YARA scartata %s: %s", src.name, exc)
-    rules = yara.compile(filepaths=good, externals=EXTERNALS)
+            continue
+        good[f"ns{i}"] = text
+    if not good:
+        raise ValueError(f"nessuna regola YARA compilabile in {rules_dir}")
+    rules = yara.compile(sources=good, externals=EXTERNALS)
     tmp = rules_dir / (COMPILED + ".tmp")
     rules.save(str(tmp))
     os.replace(tmp, rules_dir / COMPILED)
@@ -73,44 +76,61 @@ def _new_x_compiler():
     return compiler
 
 
-_LINE_RE = None
+_RULE_START = None
 
 
-def _clean_for_x(text: str, name: str, max_drops: int = 300) -> str:
-    """Toglie le regole che yara-x non accetta, una alla volta (YARA-Forge e' un file unico).
+def _drop_bad_rules(text: str, name: str, try_compile, error_cls, line_re: str,
+                    what: str, max_drops: int = 300) -> str:
+    """Toglie dal testo, una alla volta, le regole che il motore non riesce a compilare.
 
-    Un errore di compilazione lascia il compilatore inutilizzabile, quindi ogni
-    tentativo usa un compilatore nuovo; la riga dell'errore indica la regola da togliere.
+    YARA-Forge e' un unico file con migliaia di regole: senza questa pulizia una
+    sola regola non supportata (per es. `pe.number_of_signatures` quando yara-python
+    e' stato compilato senza OpenSSL, come succede su Windows) farebbe scartare
+    tutto il file. La riga indicata dall'errore dice quale regola togliere.
     """
     import re
-    import yara_x
-    global _LINE_RE
-    _LINE_RE = _LINE_RE or re.compile(r"line:(\d+):")
-    rule_start = re.compile(r"^\s*(?:(?:private|global)\s+)*rule\s+\w+")
+    global _RULE_START
+    _RULE_START = _RULE_START or re.compile(r"^\s*(?:(?:private|global)\s+)*rule\s+\w+")
+    rule_start = _RULE_START
+    line_pat = re.compile(line_re)
     lines = text.splitlines()
     dropped = 0
     while True:
         try:
-            _new_x_compiler().add_source("\n".join(lines))
+            try_compile("\n".join(lines))
             break
-        except yara_x.CompileError as exc:
-            m = _LINE_RE.search(str(exc))
+        except error_cls as exc:
+            m = line_pat.search(str(exc))
             if not m or dropped >= max_drops:
                 raise
-            bad = int(m.group(1)) - 1
+            bad = min(int(m.group(1)) - 1, len(lines) - 1)
             start = bad
             while start > 0 and not rule_start.match(lines[start]):
                 start -= 1
+            if not rule_start.match(lines[start]):        # errore fuori da una regola
+                raise
             end = start + 1
             while end < len(lines) and not rule_start.match(lines[end]):
                 end += 1
-            if not rule_start.match(lines[start]):        # errore fuori da una regola
-                raise
+            log.debug("YARA %s: scarto %s", name, lines[start].strip())
             del lines[start:end]
             dropped += 1
     if dropped:
-        log.info("YARA %s: %d regole non supportate da yara-x scartate", name, dropped)
+        log.info("YARA %s: %d regole non supportate da %s scartate", name, dropped, what)
     return "\n".join(lines)
+
+
+def _clean_for_yara(text: str, name: str) -> str:
+    import yara
+    return _drop_bad_rules(text, name, lambda t: yara.compile(source=t, externals=EXTERNALS),
+                           yara.SyntaxError, r"line (\d+)", "yara-python")
+
+
+def _clean_for_x(text: str, name: str) -> str:
+    import yara_x
+    # un errore lascia il compilatore inutilizzabile: ogni tentativo ne usa uno nuovo
+    return _drop_bad_rules(text, name, lambda t: _new_x_compiler().add_source(t),
+                           yara_x.CompileError, r"line:(\d+):", "yara-x")
 
 
 def _compile_x(rules_dir: Path) -> Path:
@@ -126,6 +146,8 @@ def _compile_x(rules_dir: Path) -> Path:
         compiler.new_namespace(f"ns{i}")
         compiler.add_source(text)
         ok += 1
+    if not ok:
+        raise ValueError(f"nessuna regola YARA compilabile in {rules_dir}")
     rules = compiler.build()
     tmp = rules_dir / (COMPILED_X + ".tmp")
     with open(tmp, "wb") as fh:
