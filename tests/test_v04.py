@@ -231,7 +231,9 @@ def test_pause_durations_and_auto_resume(tmp_path, monkeypatch):
         pause.parse_duration("per sempre")
     assert not pause.is_paused(d)
     pause.pause(d, 900)
-    assert pause.is_paused(d) and "si riattiva tra 14 min" in pause.describe(pause.status(d))
+    # sul Windows l'orologio puo' non avanzare tra pause() e describe(): 15 min 0 s e' valido
+    desc = pause.describe(pause.status(d))
+    assert pause.is_paused(d) and ("tra 14 min" in desc or "tra 15 min 0 s" in desc)
     # scade: riprende da sola
     real = time.time
     monkeypatch.setattr(pause.time, "time", lambda: real() + 901)
