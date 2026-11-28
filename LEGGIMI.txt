@@ -1,4 +1,9 @@
-PiumaAV 0.6.1 - INSTALLAZIONE SU WINDOWS
+PiumaAV 0.6.3 - INSTALLAZIONE SU WINDOWS
+
+Piu' semplice: scarica PiumaAV-0.6.3-Setup.exe da
+https://github.com/gbucciante/piuma-av/releases e fai doppio clic.
+
+In alternativa, con questo zip:
 
 1. Estrai questo zip in una cartella (es. Download\PiumaAV).
 2. Fai doppio clic su INSTALLA.bat e rispondi Si alla richiesta di Windows.

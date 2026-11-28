@@ -59,6 +59,10 @@ piuma blocklist update|remove   aggiorna o toglie il blocco dei siti malevoli
 | **Modalità leggera** | `piuma mode leggera` o il menu dell'icona: spegne ClamAV (~1–1,5 GB di RAM in meno) e usa motore Defender + hash MalwareBazaar (pochi MB) + YARA. Consigliata su Windows con poca RAM. |
 | **Disattiva protezione** | Dal menu dell'icona: per 15 min, 30 min, 1 ora o fino al riavvio, con conferma; si riattiva da sola. Da terminale: `piuma pause 30m`, `piuma resume`. Solo un amministratore può farlo, quindi un virus senza privilegi non può spegnerla. |
 
+## Novità della versione 0.6.3
+
+Data e ora degli aggiornamenti sempre in vista: il menu dello scudo mostra *PiumaAV versione 0.6.3 (aggiornato il gg/mm/aaaa hh:mm)* e *Firme aggiornate: gg/mm/aaaa hh:mm*, le stesse informazioni compaiono nel suggerimento al passaggio del mouse, nella notifica di *Aggiorna firme ora*, nel log e in `piuma status`.
+
 ## Novità della versione 0.6
 
 | Funzione | Cosa fa |
@@ -110,7 +114,14 @@ aggira facilmente: è un aiuto in più, non una garanzia.
 Scarica/estrai la cartella del progetto, poi:
 
 ### Windows 10/11
-Apri **PowerShell come amministratore** nella cartella del progetto ed esegui:
+**Modo semplice:** scarica `PiumaAV-X.Y.Z-Setup.exe` dalla pagina
+[Releases](https://github.com/gbucciante/piuma-av/releases), fai doppio clic, rispondi *Sì*
+alla richiesta di Windows e segui le schermate (Avanti › Installa). Ci vogliono 5-15 minuti.
+Per toglierlo: *Impostazioni › App › App installate › PiumaAV › Disinstalla*.
+L'installer (cartella `installer/`, Inno Setup) esegue lo stesso `install.ps1` descritto qui sotto
+e salva il resoconto in `C:\Program Files\PiumaAV\setup\installazione.log`.
+
+**Modo manuale:** apri **PowerShell come amministratore** nella cartella del progetto ed esegui:
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
 .\install\windows\install.ps1

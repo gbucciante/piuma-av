@@ -231,7 +231,9 @@ def test_pause_durations_and_auto_resume(tmp_path, monkeypatch):
         pause.parse_duration("per sempre")
     assert not pause.is_paused(d)
     pause.pause(d, 900)
-    assert pause.is_paused(d) and "si riattiva tra 14 min" in pause.describe(pause.status(d))
+    # sul Windows l'orologio puo' non avanzare tra pause() e describe(): 15 min 0 s e' valido
+    desc = pause.describe(pause.status(d))
+    assert pause.is_paused(d) and ("tra 14 min" in desc or "tra 15 min 0 s" in desc)
     # scade: riprende da sola
     real = time.time
     monkeypatch.setattr(pause.time, "time", lambda: real() + 901)
@@ -301,3 +303,20 @@ def test_last_update_date(tmp_path):
     _State(c.state_file).mark("update")
     ts = last_update(c)
     assert ts and len(format_when(ts)) == 16 and format_when(ts)[2] == "/"
+
+
+def test_program_update_date(tmp_path, monkeypatch):
+    import piuma
+    from piuma.service import program_updated, record_program_version
+    c = Config(data_dir=tmp_path / "data")
+    c.data_dir.mkdir(parents=True)
+    assert program_updated(c) is None
+    record_program_version(c)
+    first = program_updated(c)
+    assert first
+    record_program_version(c)                  # stessa versione: la data non cambia
+    assert program_updated(c) == first
+    monkeypatch.setattr(piuma, "__version__", "99.0.0")
+    assert program_updated(c) is None          # versione nuova non ancora registrata
+    record_program_version(c)
+    assert program_updated(c) >= first

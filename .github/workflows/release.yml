@@ -3,8 +3,10 @@
 # - Avvio manuale (workflow_dispatch): test + pacchetto non firmato come artifact.
 #   (I test a ogni push/PR sono in tests.yml.)
 # - Tag vX.Y.Z: stessa build; se i segreti SignPath sono configurati, i file .ps1 vengono
-#   firmati da SignPath (con approvazione manuale nel portale SignPath) e lo zip firmato
-#   viene allegato alla release GitHub. Senza segreti si allega lo zip non firmato.
+#   firmati da SignPath (con approvazione manuale nel portale SignPath), poi si costruisce
+#   l'installer PiumaAV-X.Y.Z-Setup.exe con gli script firmati e anche l'installer viene
+#   firmato da SignPath (seconda approvazione). Zip e installer vengono allegati alla
+#   release GitHub. Senza segreti si allegano i file non firmati.
 #
 # Segreti/variabili richiesti per la firma (Settings > Secrets and variables > Actions):
 #   secret   SIGNPATH_API_TOKEN        token di un utente "CI" di SignPath (ruolo submitter)
@@ -56,24 +58,19 @@ jobs:
           path: dist/pkg/
           if-no-files-found: error
 
-  sign-and-release:
+  scripts:
+    # Script .ps1 firmati da SignPath (solo per i tag, se configurato) o pacchetto non firmato
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
-      contents: write          # per allegare lo zip alla release
+      contents: read
       actions: read            # SignPath scarica l'artifact da questo run
     env:
       VERSION: ${{ needs.build.outputs.version }}
-      HAS_SIGNPATH: ${{ secrets.SIGNPATH_API_TOKEN != '' && vars.SIGNPATH_ORGANIZATION_ID != '' }}
+      SIGN: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.SIGNPATH_API_TOKEN != '' && vars.SIGNPATH_ORGANIZATION_ID != '' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Firma con SignPath (attende l'approvazione manuale)
-        if: env.HAS_SIGNPATH == 'true'
+      - name: Firma degli script con SignPath (attende l'approvazione manuale)
+        if: env.SIGN == 'true'
         uses: signpath/github-action-submit-signing-request@v1
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
@@ -84,24 +81,111 @@ jobs:
           github-artifact-id: ${{ needs.build.outputs.artifact-id }}
           wait-for-completion: true
           wait-for-completion-timeout-in-seconds: 86400
-          output-artifact-directory: dist/signed
+          output-artifact-directory: dist/pkg
 
-      - name: Pacchetto non firmato (SignPath non ancora configurato)
-        if: env.HAS_SIGNPATH != 'true'
+      - name: Pacchetto non firmato (SignPath non configurato o avvio manuale)
+        if: env.SIGN != 'true'
         uses: actions/download-artifact@v4
         with:
           name: PiumaAV-${{ env.VERSION }}-Windows-unsigned
-          path: dist/signed
+          path: dist/pkg
 
-      - name: Crea lo zip e il file SHA256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PiumaAV-${{ env.VERSION }}-Windows
+          path: dist/pkg/
+          if-no-files-found: error
+
+  installer:
+    needs: [build, scripts]
+    runs-on: windows-latest
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: PiumaAV-${{ env.VERSION }}-Windows
+          path: dist/pkg
+      - name: Icona
         run: |
-          python tools/build_release.py zip dist/signed "dist/PiumaAV-${VERSION}-Windows.zip"
-          cd dist && sha256sum "PiumaAV-${VERSION}-Windows.zip" > "PiumaAV-${VERSION}-Windows.zip.sha256"
+          python -m pip install --disable-pip-version-check "Pillow>=10"
+          python tools/make_icon.py dist/piuma.ico
+      - name: Compila l'installer (Inno Setup)
+        run: |
+          choco upgrade innosetup -y --no-progress | Out-Null
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { $iscc = "$env:ProgramFiles\Inno Setup 6\ISCC.exe" }
+          & $iscc /Qp "/DAppVersion=$env:VERSION" installer\PiumaAV.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory -Force dist\setup | Out-Null
+          Move-Item "dist\PiumaAV-$env:VERSION-Setup.exe" dist\setup\
+      - id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: PiumaAV-${{ env.VERSION }}-Setup-unsigned
+          path: dist/setup/
+          if-no-files-found: error
+
+  release:
+    needs: [build, installer]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write          # per allegare i file alla release
+      actions: read            # SignPath scarica l'artifact da questo run
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      HAS_SIGNPATH: ${{ secrets.SIGNPATH_API_TOKEN != '' && vars.SIGNPATH_ORGANIZATION_ID != '' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Firma dell'installer con SignPath (attende l'approvazione manuale)
+        if: env.HAS_SIGNPATH == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: piuma-av
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: windows-installer
+          github-artifact-id: ${{ needs.installer.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 86400
+          output-artifact-directory: dist/setup
+
+      - name: Installer non firmato (SignPath non ancora configurato)
+        if: env.HAS_SIGNPATH != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: PiumaAV-${{ env.VERSION }}-Setup-unsigned
+          path: dist/setup
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: PiumaAV-${{ env.VERSION }}-Windows
+          path: dist/pkg
+
+      - name: Crea lo zip e i file SHA256
+        run: |
+          python tools/build_release.py zip dist/pkg "dist/PiumaAV-${VERSION}-Windows.zip"
+          cp "dist/setup/PiumaAV-${VERSION}-Setup.exe" dist/
+          cd dist
+          sha256sum "PiumaAV-${VERSION}-Windows.zip" > "PiumaAV-${VERSION}-Windows.zip.sha256"
+          sha256sum "PiumaAV-${VERSION}-Setup.exe" > "PiumaAV-${VERSION}-Setup.exe.sha256"
 
       - name: Allega alla release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
-            gh release create "$GITHUB_REF_NAME" --title "PiumaAV $VERSION" --notes "Pacchetto Windows: estrai lo zip e avvia INSTALLA.bat (vedi README.md). Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). [Code signing policy](https://github.com/gbucciante/piuma-av/blob/main/CODE_SIGNING_POLICY.md) · [Privacy](https://github.com/gbucciante/piuma-av/blob/main/PRIVACY.md)"
-          gh release upload "$GITHUB_REF_NAME" dist/PiumaAV-*-Windows.zip dist/PiumaAV-*-Windows.zip.sha256 --clobber
+            gh release create "$GITHUB_REF_NAME" --title "PiumaAV $VERSION" --notes "Windows: scarica **PiumaAV-${VERSION}-Setup.exe** e fai doppio clic (in alternativa: estrai lo zip e avvia INSTALLA.bat, vedi README.md). Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). [Code signing policy](https://github.com/gbucciante/piuma-av/blob/main/CODE_SIGNING_POLICY.md) · [Privacy](https://github.com/gbucciante/piuma-av/blob/main/PRIVACY.md)"
+          gh release upload "$GITHUB_REF_NAME" dist/PiumaAV-*-Windows.zip dist/PiumaAV-*-Windows.zip.sha256 dist/PiumaAV-*-Setup.exe dist/PiumaAV-*-Setup.exe.sha256 --clobber

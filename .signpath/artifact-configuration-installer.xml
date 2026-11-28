@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Artifact configuration "windows-installer" del progetto SignPath "piuma-av".
+  Va incollata nel portale SignPath (Project > Artifact configurations).
+
+  L'artifact e' la cartella dist/setup caricata dalla GitHub Action (job "installer"),
+  che contiene solo PiumaAV-X.Y.Z-Setup.exe. Gli script .ps1 al suo interno sono gia'
+  stati firmati nel passaggio precedente (configurazione "windows-zip").
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="PiumaAV-*-Setup.exe">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

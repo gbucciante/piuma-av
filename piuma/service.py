@@ -40,12 +40,13 @@ class _State:
     def last(self, key: str) -> float:
         return float(self.data.get(key, 0))
 
-    def mark(self, key: str) -> None:
+    def mark(self, key: str, **extra) -> None:
         try:                       # rilegge: anche `piuma update` da terminale scrive qui
             self.data = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             pass
         self.data[key] = time.time()
+        self.data.update(extra)
         try:
             self.path.write_text(json.dumps(self.data, indent=2), encoding="utf-8")
         except OSError as exc:
@@ -68,12 +69,38 @@ def format_when(ts: float | None) -> str:
     return dt.datetime.fromtimestamp(ts).strftime("%d/%m/%Y %H:%M")
 
 
+def record_program_version(cfg: Config) -> None:
+    """Annota data e ora in cui questa versione di PiumaAV e' partita per la prima volta."""
+    from . import __version__
+    st = _State(cfg.state_file)
+    if st.data.get("version") != __version__:
+        st.mark("program_update", version=__version__)
+        log.info("PiumaAV aggiornato alla versione %s il %s", __version__,
+                 format_when(st.last("program_update")))
+
+
+def program_updated(cfg: Config) -> float | None:
+    """Istante in cui e' stata installata la versione attuale (None se non ancora registrato)."""
+    from . import __version__
+    try:
+        data = json.loads(cfg.state_file.read_text(encoding="utf-8"))
+        if data.get("version") == __version__ and data.get("program_update"):
+            return float(data["program_update"])
+    except (OSError, ValueError, TypeError):
+        pass
+    return None
+
+
 class Service:
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.stop_event = threading.Event()
         self.engine = create_engine(cfg.engine, cfg.data_dir, cfg.reputation)
         self.scanner = Scanner(cfg, self.engine)
+        try:
+            record_program_version(cfg)
+        except Exception:  # noqa: BLE001 - mai bloccare l'avvio per questo
+            log.debug("versione non registrata", exc_info=True)
         self.state = _State(cfg.state_file)
         self.realtime: RealtimeProtection | None = None
 
@@ -108,6 +135,7 @@ class Service:
                     self.engine.reload()     # clamd e YARA caricano le firme nuove
                 if ok:
                     self.state.mark("update")
+                    log.info("firme aggiornate il %s", format_when(self.state.last("update")))
                 else:
                     # riprova tra 30 minuti invece di aspettare l'intervallo intero
                     self.state.data["update"] = time.time() - self.cfg.update.interval_hours * 3600 + 1800

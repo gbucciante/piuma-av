@@ -37,10 +37,11 @@ def run_tray(cfg: Config) -> int:
     except ImportError:
         print("Per l'icona servono: pip install pystray Pillow", file=sys.stderr)
         return 2
-    from .service import Service, format_when, last_update
+    from .service import Service, format_when, last_update, program_updated
     from .updater import update_signatures
 
     svc = Service(cfg)
+    icon_ref: list = []
     threading.Thread(target=svc.run, name="service", daemon=True).start()
 
     def bg(fn):
@@ -59,6 +60,8 @@ def run_tray(cfg: Config) -> int:
         if ok:
             svc.state.mark("update")
             notify("PiumaAV", f"Firme aggiornate il {format_when(last_update(cfg))}")
+            if icon_ref:
+                refresh(icon_ref[0])
         else:
             notify("PiumaAV", "Aggiornamento non riuscito (vedi log). Ultimo riuscito: "
                               + format_when(last_update(cfg)))
@@ -93,10 +96,15 @@ def run_tray(cfg: Config) -> int:
         notify("PiumaAV", "Protezione riattivata")
         refresh(icon)
 
+    def _title(stato):
+        # suggerimento al passaggio del mouse (Windows lo tronca a 127 caratteri)
+        return (f"PiumaAV {__version__} - {stato}\n"
+                f"Firme aggiornate: {format_when(last_update(cfg))}")[:127]
+
     def refresh(icon):
         paused = pz.is_paused(cfg.data_dir)
         icon.icon = _icon_image((150, 150, 150) if paused else (46, 160, 90))
-        icon.title = f"PiumaAV {__version__} - " + pz.describe(pz.status(cfg.data_dir))
+        icon.title = _title(pz.describe(pz.status(cfg.data_dir)))
         icon.update_menu()
 
     def watch_pause(icon):
@@ -137,7 +145,9 @@ def run_tray(cfg: Config) -> int:
             yield pystray.MenuItem(f"Consenti {os.path.basename(p)}", allow(p))
 
     menu = pystray.Menu(
-        pystray.MenuItem(f"PiumaAV versione {__version__}", None, enabled=False),
+        pystray.MenuItem(lambda item: f"PiumaAV versione {__version__}"
+                         + (f" (aggiornato il {format_when(program_updated(cfg))})" if program_updated(cfg) else ""),
+                         None, enabled=False),
         pystray.MenuItem(lambda item: "Firme aggiornate: " + format_when(last_update(cfg)), None, enabled=False),
         pystray.MenuItem(lambda item: "Protezione " + pz.describe(pz.status(cfg.data_dir)), None, enabled=False),
         pystray.MenuItem("Disattiva protezione", pystray.Menu(
@@ -159,5 +169,7 @@ def run_tray(cfg: Config) -> int:
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Esci", quit_),
     )
-    pystray.Icon("PiumaAV", _icon_image(), f"PiumaAV {__version__} - protetto", menu).run(setup=watch_pause)
+    icon = pystray.Icon("PiumaAV", _icon_image(), _title("protetto"), menu)
+    icon_ref.append(icon)
+    icon.run(setup=watch_pause)
     return 0
