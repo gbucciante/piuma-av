@@ -133,7 +133,10 @@ def cmd_status(cfg: Config, args) -> int:
     print("Modalita'      :", cfg.mode)
     print("Motori attivi  :", ", ".join(cfg.engine.engines))
     print("Tempo reale    :", ", ".join(cfg.realtime.paths) if cfg.realtime.enabled else "disattivato")
-    from .service import format_when, last_update
+    from .service import format_when, last_update, program_updated
+    installed = program_updated(cfg)
+    print("Programma      :", f"versione {__version__}, aggiornato il {format_when(installed)}"
+          if installed else f"versione {__version__} (data registrata al primo avvio della protezione)")
     print("Firme aggiornate:", format_when(last_update(cfg)))
     print("In quarantena  :", len(Quarantine(cfg.quarantine_dir).list()))
     return 0

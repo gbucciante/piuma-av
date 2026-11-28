@@ -59,6 +59,10 @@ piuma blocklist update|remove   aggiorna o toglie il blocco dei siti malevoli
 | **Modalità leggera** | `piuma mode leggera` o il menu dell'icona: spegne ClamAV (~1–1,5 GB di RAM in meno) e usa motore Defender + hash MalwareBazaar (pochi MB) + YARA. Consigliata su Windows con poca RAM. |
 | **Disattiva protezione** | Dal menu dell'icona: per 15 min, 30 min, 1 ora o fino al riavvio, con conferma; si riattiva da sola. Da terminale: `piuma pause 30m`, `piuma resume`. Solo un amministratore può farlo, quindi un virus senza privilegi non può spegnerla. |
 
+## Novità della versione 0.6.3
+
+Data e ora degli aggiornamenti sempre in vista: il menu dello scudo mostra *PiumaAV versione 0.6.3 (aggiornato il gg/mm/aaaa hh:mm)* e *Firme aggiornate: gg/mm/aaaa hh:mm*, le stesse informazioni compaiono nel suggerimento al passaggio del mouse, nella notifica di *Aggiorna firme ora*, nel log e in `piuma status`.
+
 ## Novità della versione 0.6
 
 | Funzione | Cosa fa |

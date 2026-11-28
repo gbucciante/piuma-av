@@ -301,3 +301,20 @@ def test_last_update_date(tmp_path):
     _State(c.state_file).mark("update")
     ts = last_update(c)
     assert ts and len(format_when(ts)) == 16 and format_when(ts)[2] == "/"
+
+
+def test_program_update_date(tmp_path, monkeypatch):
+    import piuma
+    from piuma.service import program_updated, record_program_version
+    c = Config(data_dir=tmp_path / "data")
+    c.data_dir.mkdir(parents=True)
+    assert program_updated(c) is None
+    record_program_version(c)
+    first = program_updated(c)
+    assert first
+    record_program_version(c)                  # stessa versione: la data non cambia
+    assert program_updated(c) == first
+    monkeypatch.setattr(piuma, "__version__", "99.0.0")
+    assert program_updated(c) is None          # versione nuova non ancora registrata
+    record_program_version(c)
+    assert program_updated(c) >= first
